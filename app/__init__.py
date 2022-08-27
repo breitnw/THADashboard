@@ -27,16 +27,13 @@ def create_app():
     def index():
         return render_template('index.html')
 
-    # the map page
-    @app.route('/map/')
-    @login_required
-    def map():
-        return render_template('map.html')
-
     from . import db
     db.init_app(app)
 
     from . import auth
     app.register_blueprint(auth.bp)
+
+    from . import map
+    app.register_blueprint(map.bp)
 
     return app

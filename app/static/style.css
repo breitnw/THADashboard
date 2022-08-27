@@ -91,3 +91,8 @@ input[type=submit] {
     align-self: start;
     min-width: 10em;
 }
+
+#map {
+    margin: 1rem 0;
+    height: 30rem;
+}
