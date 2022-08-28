@@ -31,7 +31,7 @@ def assert_available(query):
 @bp.route('/zip_code_editor')
 @login_required
 def zip_code_editor():
-    #TODO: Load from a global pandas table or from MembershipWorks instead
+    # TODO: Load from a global pandas table or from MembershipWorks instead
     data = pd.read_csv("app" + url_for('static', filename='export.csv'))
 
     # Generate a dictionary with the coordinates of every hub location
