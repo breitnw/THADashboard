@@ -61,6 +61,4 @@ def zip_code_editor():
         }
         geojson_data.append(data)
 
-    print(geojson_data)
-
     return render_template('zip_code_map.html', geojson_data=geojson_data)
