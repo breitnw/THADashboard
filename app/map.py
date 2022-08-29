@@ -42,15 +42,22 @@ def zip_code_editor():
         hub_location_coords[location] = (query["latitude"], query["longitude"])
 
     # Get a list of all of the unique zipcodes in the data set
-    unique_zipcodes = data["Address (Postal Code)"].drop_duplicates()
+    zipcodes = data.loc[:, ["Address (Postal Code)"]]
+    zipcodes['Count'] = zipcodes.groupby(['Address (Postal Code)'])['Address (Postal Code)'].transform('size')
+    unique_zipcodes = zipcodes.drop_duplicates()
+    # print(unique_zipcodes.to_string())
+
 
     geojson_data = []
-    for code in unique_zipcodes:
+    for index, row in unique_zipcodes.iterrows():
+        code = str(row["Address (Postal Code)"])
+        count = str(row["Count"])
         query = nomi.query_postal_code(code)
         data = {
             "type": "Feature",
             "properties": {
                 "zip_code": code,
+                "count": count,
                 # TODO: load zipcode assignments from the database table, or leave them as "unassigned" if there isn't an entry
                 "hub": "unassigned",
             },
@@ -61,4 +68,5 @@ def zip_code_editor():
         }
         geojson_data.append(data)
 
+    print(geojson_data)
     return render_template('zip_code_map.html', geojson_data=geojson_data)

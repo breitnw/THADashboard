@@ -32,7 +32,7 @@ function updateGeoJSON(pointData) {
                 color = "#FFFF00"
             }
             return L.circleMarker(latlng, {
-                radius: 5,
+                radius: feature.properties.count / 5 + 5,
                 fillColor: color,
                 color: "#000",
                 weight: 1,
