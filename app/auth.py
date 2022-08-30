@@ -3,8 +3,7 @@ from flask import (
     Blueprint, flash, g, redirect, render_template, request, session, url_for, current_app
 )
 from werkzeug.security import check_password_hash, generate_password_hash
-
-from app.db import get_db
+import time
 
 
 bp = Blueprint('auth', __name__, url_prefix='/auth')
@@ -12,14 +11,16 @@ bp = Blueprint('auth', __name__, url_prefix='/auth')
 
 @bp.route('/register', methods=('GET', 'POST'))
 def register():
-    redis_client = current_app.extensions['redis']
     if request.method == 'POST':
+        redis_client = current_app.extensions['redis']
+
         username = request.form['username']
+        l_username = username.lower()
         password = request.form['password']
-        db = get_db()
+
         error = None
         
-        if not username:
+        if not l_username:
             error = 'Username is required.'
         elif not password:
             error = 'Password is required.'
@@ -28,21 +29,23 @@ def register():
             flash('Password must be eight characters or longer.')
         
         if error is None:
-            try:
-                db.execute(
-                    "INSERT INTO user (username, password) VALUES (?, ?)",
-                    (username, generate_password_hash(password)),
-                )
-                db.commit()
-            except db.IntegrityError:
+            if redis_client.hget('users:', l_username):
                 error = f"User {username} is already registered."
             else:
+                # TODO: potentially implement a lock here
+                user_id = redis_client.incr('user:id:')
+                pipeline = redis_client.pipeline(True)
+                pipeline.hset('users:', l_username, user_id)
+                pipeline.hmset('user:%s' % user_id, {
+                    'username': username,
+                    'password': generate_password_hash(password),
+                    'id': user_id,
+                    'admin': 0,
+                    'signup': time.time(),
+                })
+                pipeline.execute()
+                redis_client.hset("user:" + username, "password", generate_password_hash(password))
                 return redirect(url_for("auth.login"))
-            # if redis_client.exists(username):
-            #     error = f"User {username} is already registered."
-            # else:
-            #     redis_client.hset("user:" + username, "password", generate_password_hash(password))
-            #     return redirect(url_for("auth.login"))
         
         flash(error)
     
@@ -52,18 +55,22 @@ def register():
 @bp.route('/login', methods=('GET', 'POST'))
 def login():
     if request.method == 'POST':
-        username = request.form['username']
-        password = request.form['password']
-        db = get_db()
-        error = None
-        user = db.execute(
-            'SELECT * FROM user WHERE username = ?', (username,)
-        ).fetchone()
+        redis_client = current_app.extensions['redis']
 
-        if user is None:
+        username = request.form['username']
+        l_username = username.lower()
+        password = request.form['password']
+
+        error = None
+        user = None
+        user_id = redis_client.hget('users:', l_username)
+
+        if user_id is None:
             error = 'Incorrect username.'
-        elif not check_password_hash(user['password'], password):
-            error = 'Incorrect password.'
+        else:
+            user = redis_client.hgetall('user:%s' % user_id)
+            if not check_password_hash(user['password'], password):
+                error = 'Incorrect password.'
         
         if error is None:
             session.clear()
@@ -82,9 +89,8 @@ def load_logged_in_user():
     if user_id is None:
         g.user = None
     else:
-        g.user = get_db().execute(
-            'SELECT * FROM user WHERE id = ?', (user_id,)
-        ).fetchone()
+        redis_client = current_app.extensions['redis']
+        g.user = user = redis_client.hgetall('user:%s' % user_id)
 
 
 @bp.route('/logout')

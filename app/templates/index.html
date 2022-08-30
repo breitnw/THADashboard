@@ -6,5 +6,6 @@
 
 {% block content %}
     <p>Hello World</p>
+    <p>{{ g.user }}</p>
     <a href="{{ url_for('map.zip_code_editor') }}">Map</a>
 {% endblock %}

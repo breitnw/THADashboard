@@ -1,12 +1,11 @@
-version: "1.0"
 services:
   web:
     build: .
     ports:
       - 5000:5000
     depends_on:
-      - redis
-  redis:
+      - redis_db
+  redis_db:
     image: redis:latest
     volumes:
       - redis_data:/data

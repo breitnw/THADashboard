@@ -11,7 +11,6 @@ def create_app():
     app.config.from_mapping(
         # TODO: make sure to change the secret key later (see tutorial)
         SECRET_KEY='dev',
-        DATABASE=os.path.join(app.instance_path, 'db.sqlite'),
     )
     # load the instance config, if it exists
     app.config.from_pyfile('config.py', silent=True)
@@ -23,16 +22,13 @@ def create_app():
         pass
 
     # initialize Redis (work in progress)
-    redis_client = FlaskRedis(app)
+    redis_client = FlaskRedis(app, decode_responses=True)
 
     # the home page
     @app.route('/')
     @login_required
     def index():
         return render_template('index.html')
-
-    from . import db
-    db.init_app(app)
 
     from . import secret_generator
     app.cli.add_command(secret_generator.generate_secret_key_command)
