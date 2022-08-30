@@ -9,6 +9,8 @@ from flask import current_app
 @click.confirmation_option(prompt="Are you sure? If config.py already has a SECRET_KEY, it will be overridden.")
 def generate_secret_key_command():
     """Create a config.py file in the instance folder that sets SECRET_KEY to a randomly generated string"""
+    open(os.path.join(current_app.instance_path, "config.py"), "w+").close()
+
     new_data = ""
     with open(os.path.join(current_app.instance_path, "config.py"), "r") as f:
         added_secret = False

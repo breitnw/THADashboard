@@ -11,6 +11,7 @@ def create_app():
     app.config.from_mapping(
         # TODO: make sure to change the secret key later (see tutorial)
         SECRET_KEY='dev',
+        REDIS_URL='redis://redis_db:6379'
     )
     # load the instance config, if it exists
     app.config.from_pyfile('config.py', silent=True)
