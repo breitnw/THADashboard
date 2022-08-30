@@ -1,6 +1,6 @@
 import functools
 from flask import (
-    Blueprint, flash, g, redirect, render_template, request, session, url_for
+    Blueprint, flash, g, redirect, render_template, request, session, url_for, current_app
 )
 from werkzeug.security import check_password_hash, generate_password_hash
 
@@ -12,6 +12,7 @@ bp = Blueprint('auth', __name__, url_prefix='/auth')
 
 @bp.route('/register', methods=('GET', 'POST'))
 def register():
+    redis_client = current_app.extensions['redis']
     if request.method == 'POST':
         username = request.form['username']
         password = request.form['password']
@@ -37,6 +38,11 @@ def register():
                 error = f"User {username} is already registered."
             else:
                 return redirect(url_for("auth.login"))
+            # if redis_client.exists(username):
+            #     error = f"User {username} is already registered."
+            # else:
+            #     redis_client.hset("user:" + username, "password", generate_password_hash(password))
+            #     return redirect(url_for("auth.login"))
         
         flash(error)
     

@@ -45,8 +45,6 @@ def zip_code_editor():
     zipcodes = data.loc[:, ["Address (Postal Code)"]]
     zipcodes['Count'] = zipcodes.groupby(['Address (Postal Code)'])['Address (Postal Code)'].transform('size')
     unique_zipcodes = zipcodes.drop_duplicates()
-    # print(unique_zipcodes.to_string())
-
 
     geojson_data = []
     for index, row in unique_zipcodes.iterrows():
@@ -68,5 +66,4 @@ def zip_code_editor():
         }
         geojson_data.append(data)
 
-    print(geojson_data)
     return render_template('zip_code_map.html', geojson_data=geojson_data)

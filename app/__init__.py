@@ -1,5 +1,6 @@
 import os
 from flask import Flask, redirect, render_template
+from flask_redis import FlaskRedis
 
 from app.auth import login_required
 
@@ -12,7 +13,6 @@ def create_app():
         SECRET_KEY='dev',
         DATABASE=os.path.join(app.instance_path, 'db.sqlite'),
     )
-
     # load the instance config, if it exists
     app.config.from_pyfile('config.py', silent=True)
 
@@ -21,6 +21,9 @@ def create_app():
         os.makedirs(app.instance_path)
     except OSError:
         pass
+
+    # initialize Redis (work in progress)
+    redis_client = FlaskRedis(app)
 
     # the home page
     @app.route('/')
