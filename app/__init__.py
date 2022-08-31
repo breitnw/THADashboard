@@ -10,7 +10,7 @@ def create_app():
     app = Flask(__name__, instance_relative_config=True)
     app.config.from_mapping(
         # TODO: make sure to change the secret key later (see tutorial)
-        SECRET_KEY='dev',
+        SECRET_KEY=os.environ.get('SECRET_KEY', 'dev'),
         REDIS_URL='redis://redis_db:6379'
     )
     # load the instance config, if it exists
@@ -30,9 +30,6 @@ def create_app():
     @login_required
     def index():
         return render_template('index.html')
-
-    from . import secret_generator
-    app.cli.add_command(secret_generator.generate_secret_key_command)
 
     from . import auth
     app.register_blueprint(auth.bp)
