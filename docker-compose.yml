@@ -1,6 +1,7 @@
 services:
   web:
     build: .
+    image: breitnw/ha_project_web:latest
     env_file: variables.env
     ports:
       - 5000:5000
