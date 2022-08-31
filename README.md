@@ -4,5 +4,6 @@ Utilities to aid in data management for The Humanity Alliance, a Minnesota-based
 #### Instructions for Use
 You can build the project with `docker-compose build`, and run with `docker-compose up`.
 
-When deploying to production, first run `flask generate-secret-key` to generate *config.py* in the instance folder,
-containing a secret key for the application.
+When deploying to production, first create a file named `variables.env` in the project's base directory (the same directory
+as `docker-compose.yml`). Add the line `SECRET_KEY=MY_SECRET` to the file, replacing `MY_SECRET` with a secure key. One way
+to generate such a key is via `python3 -c "import secrets; print(secrets.token_hex())"`.

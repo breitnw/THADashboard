@@ -15,8 +15,6 @@ RUN addgroup --gid $GROUP_ID www
 RUN adduser --disabled-password --uid $USER_ID --gid $GROUP_ID www --shell /bin/sh
 
 COPY app /var/www/app
-# TODO: probably generate the instance folder with init-db instead
-COPY instance /var/www/instance
 
 USER www
 EXPOSE 5000
