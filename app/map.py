@@ -4,7 +4,7 @@ import math
 import json
 import os
 
-from flask import Blueprint, render_template, url_for
+from flask import Blueprint, render_template, url_for, request, current_app
 
 from app.auth import login_required
 
@@ -22,10 +22,20 @@ nomi = pgeocode.Nominatim('us')
 
 
 # the map page
-@bp.route('/zip_code_editor')
+@bp.route('/zip_editor', methods=['GET', 'POST'])
 @login_required
-def zip_code_editor():
-    # TODO: Load from a global pandas table or from MembershipWorks instead
+def zip_editor():
+    redis_client = current_app.extensions['redis']
+
+    # After editing, post the data to the redis database
+    if request.method == 'POST':
+        new_hub_data = request.json
+        for zip, hub in new_hub_data.items():
+            redis_client.set("zip:" + zip, hub)
+        return url_for('index')
+
+    # Read export.csv, containing all of the data that needs to be assigned
+    # TODO: load from a global pandas table instead
     data = pd.read_csv(os.path.join(os.path.dirname(__file__), 'data', 'export.csv'))
 
     # Generate a dictionary with the coordinates of every hub location
@@ -41,25 +51,28 @@ def zip_code_editor():
     unique_zipcodes = zipcodes.drop_duplicates()
 
     geojson_data = []
+    hub_data = {}
     for index, row in unique_zipcodes.iterrows():
-        code = str(row["Address (Postal Code)"])
+        zip = str(row["Address (Postal Code)"])
         count = str(row["Count"])
 
         data = {
             "type": "Feature",
             "properties": {
-                "zip_code": code,
+                "zip": zip,
                 "count": count,
-                # TODO: load zipcode assignments from the database table, or leave them as "unassigned" if there isn't an entry
-                "hub": "unassigned",
             },
             "geometry": {
                 "type": "Polygon",
-                "coordinates": zcta_polygons[int(code)]
+                "coordinates": zcta_polygons[int(zip)]
             }
         }
+
+        # TODO: load zipcode assignments from the database table, or leave them as "unassigned" if there isn't an entry
+        hub_data[zip] = redis_client.get("zip:" + zip)
+
         geojson_data.append(data)
-    return render_template('zip_code_map.html', geojson_data=geojson_data)
+    return render_template('zip_map.html', geojson_data=geojson_data, hub_data=hub_data)
 
 
 def assert_available(query):
@@ -75,7 +88,7 @@ def init_app():
     geojson_dict = json.load(f)
     f.close()
     for feature in geojson_dict['features']:
-        zip_code = int(feature['properties']['ZCTA5CE20'])
+        zip = int(feature['properties']['ZCTA5CE20'])
         geometry = feature['geometry']['coordinates']
 
         # Needed to fix a weird GeoJSON bug
@@ -84,4 +97,4 @@ def init_app():
                 geometry[i] = sub_arr[0]
 
         # Add to the dictionary
-        zcta_polygons[zip_code] = geometry
+        zcta_polygons[zip] = geometry

@@ -15,9 +15,13 @@
 
     <div id="map"></div>
     <script>
-        let geojsonData = {{geojson_data|tojson}};
+        let gjData = {{geojson_data|tojson}};
+        let hubData = {{ hub_data|tojson }}
     </script>
     <script src="{{ url_for('static', filename='zip_code_map.js') }}"></script>
     <p id="info">no info to display</p>
-
+    <button id="saveButton" onclick="submitToServer()">Save</button>
+    <script>
+        updateSaveButton()
+    </script>
 {% endblock %}
