@@ -69,9 +69,13 @@ def zip_editor():
         }
 
         # TODO: load zipcode assignments from the database table, or leave them as "unassigned" if there isn't an entry
-        hub_data[zip] = redis_client.get("zip:" + zip)
+        if redis_client.exists("zip:" + zip):
+            hub_data[zip] = redis_client.get("zip:" + zip)
+        else:
+            hub_data[zip] = "unassigned"
 
         geojson_data.append(data)
+
     return render_template('zip_map.html', geojson_data=geojson_data, hub_data=hub_data)
 
 
