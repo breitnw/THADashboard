@@ -15,8 +15,9 @@
 
     <div id="map"></div>
     <script>
-        let geoJSONPoints = {{geojson_data|tojson}};
+        let geojsonData = {{geojson_data|tojson}};
     </script>
     <script src="{{ url_for('static', filename='zip_code_map.js') }}"></script>
+    <p id="info">no info to display</p>
 
 {% endblock %}
