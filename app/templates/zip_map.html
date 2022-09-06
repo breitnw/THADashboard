@@ -16,12 +16,21 @@
     <div id="map"></div>
     <script>
         let gjData = {{geojson_data|tojson}};
-        let hubData = {{ hub_data|tojson }}
+        let hubData = {{ hub_assignment_data|tojson }}
     </script>
+
+    <label for="hubSelector">Select Hub&nbsp;</label>
+    <select id="hubSelector">
+        {% for hub in hub_location_data.keys() %}
+            <option value="{{ hub }}">{{ hub }}</option>
+        {% endfor %}
+    </select>
+    <br><br>
+
+    <button id="saveButton" onclick="submitToServer()" disabled>Save</button>
+    <span id="savingText" style="color: gray" hidden>Saving...</span>
+    <span id="savedText" style="color: darkgreen" hidden>Successfully saved!</span>
+
     <script src="{{ url_for('static', filename='zip_code_map.js') }}"></script>
-    <p id="info">no info to display</p>
-    <button id="saveButton" onclick="submitToServer()">Save</button>
-    <script>
-        updateSaveButton()
-    </script>
+
 {% endblock %}

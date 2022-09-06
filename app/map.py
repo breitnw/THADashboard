@@ -8,13 +8,17 @@ from flask import Blueprint, render_template, url_for, request, current_app
 
 from app.auth import login_required
 
+# TODO: Wait for save to be processed until allowing page to be closed, display a spinner or something
+
+# TODO: Display the following on the map screen:
+# List of unassigned zip codes
+# Total deliveries for each hub
 
 # TODO: load data from database table into CSV file when exporting
 bp = Blueprint('map', __name__, url_prefix='/map')
 
-
 # TODO: East hub zipcode may be wrong
-HUB_LOCATION_ZIPCODES = {"West": 55386, "East": 55411}
+HUB_LOCATION_ZIPCODES = {"west": 55386, "east": 55411}
 zcta_polygons = {}
 
 # Pygeocode is used to get the coordinates of each zip code
@@ -51,7 +55,7 @@ def zip_editor():
     unique_zipcodes = zipcodes.drop_duplicates()
 
     geojson_data = []
-    hub_data = {}
+    hub_assignment_data = {}
     for index, row in unique_zipcodes.iterrows():
         zip = str(row["Address (Postal Code)"])
         count = str(row["Count"])
@@ -70,13 +74,16 @@ def zip_editor():
 
         # TODO: load zipcode assignments from the database table, or leave them as "unassigned" if there isn't an entry
         if redis_client.exists("zip:" + zip):
-            hub_data[zip] = redis_client.get("zip:" + zip)
+            hub_assignment_data[zip] = redis_client.get("zip:" + zip)
         else:
-            hub_data[zip] = "unassigned"
+            hub_assignment_data[zip] = "unassigned"
 
         geojson_data.append(data)
 
-    return render_template('zip_map.html', geojson_data=geojson_data, hub_data=hub_data)
+    return render_template('zip_map.html',
+                           geojson_data=geojson_data,
+                           hub_assignment_data=hub_assignment_data,
+                           hub_location_data=HUB_LOCATION_ZIPCODES,)
 
 
 def assert_available(query):

@@ -1,12 +1,25 @@
-//set the selected hub
-let selectedHub = "east"
+//DOM elements
+const hubSelector = document.getElementById("hubSelector");
+const saveButton = document.getElementById("saveButton")
+const savingText = document.getElementById("savingText")
+const savedText = document.getElementById("savedText")
+
 let saved = true
 
 //init the map
 let map = L.map('map').setView([44.9778, -93.2650], 10);
-L.tileLayer('https://api.maptiler.com/maps/basic-v2/{z}/{x}/{y}.png?key=Lpwn9fHg25lYklktmWQz', {
+//default map style
+// L.tileLayer('https://api.maptiler.com/maps/basic-v2/{z}/{x}/{y}.png?key=Lpwn9fHg25lYklktmWQz', {
+//     tileSize: 512,
+//     maxZoom: 19,
+//     zoomOffset: -1,
+//     minZoom: 1,
+//     attribution: "\u003ca href=\"https://www.maptiler.com/copyright/\" target=\"_blank\"\u003e\u0026copy; MapTiler\u003c/a\u003e \u003ca href=\"https://www.openstreetmap.org/copyright\" target=\"_blank\"\u003e\u0026copy; OpenStreetMap contributors\u003c/a\u003e",
+//     crossOrigin: true
+// }).addTo(map);
+//pastel map
+L.tileLayer('https://api.maptiler.com/maps/pastel/{z}/{x}/{y}.png?key=Lpwn9fHg25lYklktmWQz',{
     tileSize: 512,
-    maxZoom: 19,
     zoomOffset: -1,
     minZoom: 1,
     attribution: "\u003ca href=\"https://www.maptiler.com/copyright/\" target=\"_blank\"\u003e\u0026copy; MapTiler\u003c/a\u003e \u003ca href=\"https://www.openstreetmap.org/copyright\" target=\"_blank\"\u003e\u0026copy; OpenStreetMap contributors\u003c/a\u003e",
@@ -16,7 +29,7 @@ L.tileLayer('https://api.maptiler.com/maps/basic-v2/{z}/{x}/{y}.png?key=Lpwn9fHg
 //add the geojson data
 let geojson;
 
-function highlightFeature(e) {
+function mouseOver(e) {
     let layer = e.target;
     layer.setStyle({
         weight: 5,
@@ -27,11 +40,21 @@ function highlightFeature(e) {
     if (!L.Browser.ie && !L.Browser.opera && !L.Browser.edge) {
         layer.bringToFront();
     }
+    info.update(layer.feature.properties)
 }
 
-function resetHighlight(e) {
-    let feature = e.target.feature
-    e.target.setStyle(style(feature));
+function mouseOut(e) {
+    resetHighlight(e.target)
+    info.update(e.target.feature.properties)
+}
+
+function resetHighlight(layer) {
+    layer.setStyle(style(layer.feature));
+    if (hubData[layer.feature.properties.zip] !== "unassigned") {
+        if (!L.Browser.ie && !L.Browser.opera && !L.Browser.edge) {
+            layer.bringToBack();
+        }
+    }
 }
 
 function setHub(e) {
@@ -39,45 +62,48 @@ function setHub(e) {
     let feature = e.target.feature
 
     // Set the new hub both in the feature's properties and in the dict
-    hubData[feature.properties.zip] = (hubData[feature.properties.zip] === "unassigned") ? selectedHub : "unassigned"
+    hubData[feature.properties.zip] = (hubData[feature.properties.zip] === hubSelector.value) ? "unassigned" : hubSelector.value
 
     // Update the element's style
     e.target.setStyle(style(feature));
-    document.getElementById("info").innerText = feature.properties.zip + ": " + hubData[feature.properties.zip];
 
     // Set 'saved' to reflect a change has been made without saving
     saved = false
-    updateSaveButton()
+
+    // Update the UI to reflect this change
+    setUISaveStatus(SaveStatus.UNSAVED)
 }
 
 function style(feature) {
     let hub = hubData[feature.properties.zip]
 
-    let color = "#333333"
-    let border_color = "#FFFFFF"
+    let color = "#999999"
+    let borderColor = "#FFFFFF"
     let weight = 1
+    let dashArray = '1'
 
-    if (hub === selectedHub) {
+    if (hub === hubSelector.value) {
         color = "#6da83a"
     } else if (hub === "unassigned") {
         color = "#e0b424"
-        // weight = 2
+        borderColor = "#c9972c"
+        weight = 2
     }
 
     return {
         fillColor: color,
         weight: weight,
         opacity: 1,
-        color: border_color,
-        dashArray: '3',
+        color: borderColor,
+        dashArray: dashArray,
         fillOpacity: getOpacity(feature.properties.count)
     };
 }
 
 function onEachFeature(feature, layer) {
     layer.on({
-        mouseover: highlightFeature,
-        mouseout: resetHighlight,
+        mouseover: mouseOver,
+        mouseout: mouseOut,
         click: setHub
     });
 }
@@ -87,6 +113,15 @@ geojson = L.geoJSON(gjData, {
     onEachFeature: onEachFeature
 }).addTo(map);
 
+// Iterate through all the layers in the geoJSON and update their highlight color
+function resetHighlightAll() {
+    geojson.eachLayer(function(layer) {
+        resetHighlight(layer)
+    })
+}
+hubSelector.addEventListener('change',resetHighlightAll);
+
+// Determine layer opacity depending on number of orders
 function getOpacity(d) {
     return d > 100 ? 0.9 :
            d > 50  ? 0.8 :
@@ -98,19 +133,76 @@ function getOpacity(d) {
                       0.5;
 }
 
-// Make a POST request to the server
+// Add an info box to the map to display current zipcode and other stats
+let info = L.control();
+info.onAdd = function (map) {
+    this._div = L.DomUtil.create('div', 'info'); // create a div with a class "info"
+    this.update();
+    return this._div;
+};
+info.update = function (props) {
+    this._div.innerHTML = '<h4>Details</h4>' + (props ?
+        '<b>' + props.zip + '</b><br>' + props.count + (props.count === '1' ? ' delivery' : ' deliveries') +
+        '<br>' + 'hub: ' + hubData[props.zip]
+        : 'Hover over a ZIP Code'
+    );
+};
+info.addTo(map);
+
+// Make a POST request to the server if all the zip codes have been assigned
 function submitToServer() {
+    if (Object.values(hubData).includes("unassigned")) {
+        let err = "The following ZIP Codes still need to be assigned before saving:"
+        for (let key in hubData) {
+            if (hubData[key] === "unassigned") {
+                err += "\n- " + key
+            }
+        }
+        alert(err);
+        return
+    }
     let xhr = new XMLHttpRequest();
     xhr.open("POST", window.location.href, true);
     xhr.setRequestHeader('Content-Type', 'application/json');
+
+    setUISaveStatus(SaveStatus.SAVING)
+
+    xhr.onload = function(e) {
+        if (xhr.status === 200) {
+            saved = true
+            setUISaveStatus(SaveStatus.SAVED)
+        } else {
+            alert("unable to save")
+            setUISaveStatus(SaveStatus.UNSAVED)
+        }
+    }
     xhr.send(JSON.stringify(hubData));
-    saved = true
-    updateSaveButton()
 }
 
-// Disable the save button if already saved
-function updateSaveButton() {
-    document.getElementById("saveButton").disabled = saved
+// Change the UI depending on if the map is saved, saving, or unsaved
+const SaveStatus = {
+	UNSAVED: 0,
+	SAVING: 1,
+	SAVED: 2,
+}
+function setUISaveStatus(status) {
+    switch (status) {
+        case SaveStatus.UNSAVED:
+            saveButton.disabled = false
+            savingText.hidden = true
+            savedText.hidden = true
+            break
+        case SaveStatus.SAVING:
+            saveButton.disabled = true
+            savingText.hidden = false
+            savedText.hidden = true
+            break
+        case SaveStatus.SAVED:
+            saveButton.disabled = true
+            savingText.hidden = true
+            savedText.hidden = false
+            break
+    }
 }
 
 // Confirmation to save before exiting
@@ -119,3 +211,6 @@ window.onbeforeunload = function(){
         return 'Are you sure you want to leave? Any unsaved changes will be lost.';
     }
 };
+
+// Run these functions when the page is loaded
+resetHighlightAll()
