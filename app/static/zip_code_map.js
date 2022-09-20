@@ -1,23 +1,15 @@
 //DOM elements
-const hubSelector = document.getElementById("hubSelector");
+const hubSelector = document.getElementById("hubSelector")
 const saveButton = document.getElementById("saveButton")
 const savingText = document.getElementById("savingText")
 const savedText = document.getElementById("savedText")
 
 let saved = true
 
-//init the map
+// TODO: Display total deliveries for each hub
+
+// Init the map
 let map = L.map('map').setView([44.9778, -93.2650], 10);
-//default map style
-// L.tileLayer('https://api.maptiler.com/maps/basic-v2/{z}/{x}/{y}.png?key=Lpwn9fHg25lYklktmWQz', {
-//     tileSize: 512,
-//     maxZoom: 19,
-//     zoomOffset: -1,
-//     minZoom: 1,
-//     attribution: "\u003ca href=\"https://www.maptiler.com/copyright/\" target=\"_blank\"\u003e\u0026copy; MapTiler\u003c/a\u003e \u003ca href=\"https://www.openstreetmap.org/copyright\" target=\"_blank\"\u003e\u0026copy; OpenStreetMap contributors\u003c/a\u003e",
-//     crossOrigin: true
-// }).addTo(map);
-//pastel map
 L.tileLayer('https://api.maptiler.com/maps/pastel/{z}/{x}/{y}.png?key=Lpwn9fHg25lYklktmWQz',{
     tileSize: 512,
     zoomOffset: -1,
@@ -26,7 +18,19 @@ L.tileLayer('https://api.maptiler.com/maps/pastel/{z}/{x}/{y}.png?key=Lpwn9fHg25
     crossOrigin: true
 }).addTo(map);
 
-//add the geojson data
+
+// Add markers to the map representing the locations of the hubs
+let hubMarkers = []
+for (let key in hubLocationData) {
+    let location = hubLocationData[key]
+    let marker = new L.CircleMarker(location, {radius: 5})
+            .bindPopup('Hub: ' + key)
+            .addTo(map)
+    marker.hub = key
+    hubMarkers.push(marker)
+}
+
+// Add the geojson data
 let geojson;
 
 function mouseOver(e) {
@@ -41,6 +45,9 @@ function mouseOver(e) {
         layer.bringToFront();
     }
     info.update(layer.feature.properties)
+    for (let marker of hubMarkers){
+        marker.bringToFront()
+    }
 }
 
 function mouseOut(e) {
@@ -58,18 +65,13 @@ function resetHighlight(layer) {
 }
 
 function setHub(e) {
-    // TODO: send the dict back to Flask on post
     let feature = e.target.feature
-
     // Set the new hub both in the feature's properties and in the dict
     hubData[feature.properties.zip] = (hubData[feature.properties.zip] === hubSelector.value) ? "unassigned" : hubSelector.value
-
     // Update the element's style
     e.target.setStyle(style(feature));
-
     // Set 'saved' to reflect a change has been made without saving
     saved = false
-
     // Update the UI to reflect this change
     setUISaveStatus(SaveStatus.UNSAVED)
 }
@@ -108,18 +110,11 @@ function onEachFeature(feature, layer) {
     });
 }
 
+// Add the geoJSON data to the map
 geojson = L.geoJSON(gjData, {
     style: style,
     onEachFeature: onEachFeature
 }).addTo(map);
-
-// Iterate through all the layers in the geoJSON and update their highlight color
-function resetHighlightAll() {
-    geojson.eachLayer(function(layer) {
-        resetHighlight(layer)
-    })
-}
-hubSelector.addEventListener('change',resetHighlightAll);
 
 // Determine layer opacity depending on number of orders
 function getOpacity(d) {
@@ -132,6 +127,25 @@ function getOpacity(d) {
            d > 1   ? 0.6 :
                       0.5;
 }
+
+
+// Iterate through all the markers and geoJSON layers and update their colors
+function resetAllLayers() {
+    geojson.eachLayer(function(layer) {
+        resetHighlight(layer)
+    })
+    // TODO: gray out inactive markers here
+    for (let marker of hubMarkers) {
+        console.log(marker.hub);
+        let color = (hubSelector.value === marker.hub ? '#007FFF' : '#657065')
+        marker.setStyle({
+            fillColor: color,
+            color: color,
+        })
+    }
+}
+hubSelector.addEventListener('change', resetAllLayers);
+
 
 // Add an info box to the map to display current zipcode and other stats
 let info = L.control();
@@ -148,6 +162,7 @@ info.update = function (props) {
     );
 };
 info.addTo(map);
+
 
 // Make a POST request to the server if all the zip codes have been assigned
 function submitToServer() {
@@ -213,4 +228,4 @@ window.onbeforeunload = function(){
 };
 
 // Run these functions when the page is loaded
-resetHighlightAll()
+resetAllLayers()

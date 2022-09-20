@@ -1,14 +1,12 @@
 import pandas as pd
-import pgeocode
 import math
 import json
 import os
 
-from flask import Blueprint, render_template, url_for, request, current_app
+from flask import Blueprint, render_template, url_for, request, current_app, flash, redirect
 
 from app.auth import login_required
-
-# TODO: Wait for save to be processed until allowing page to be closed, display a spinner or something
+import app.mw_to_onfleet
 
 # TODO: Display the following on the map screen:
 # List of unassigned zip codes
@@ -17,14 +15,12 @@ from app.auth import login_required
 # TODO: load data from database table into CSV file when exporting
 bp = Blueprint('map', __name__, url_prefix='/map')
 
-# TODO: East hub zipcode may be wrong
-HUB_LOCATION_ZIPCODES = {"west": 55386, "east": 55411}
+# West: 7600 Victoria drive, Victoria MN 55386
+# East: 1835 North Penn Avenue, Minneapolis MN 55411
+HUB_LOCATION_COORDS = {"West": (44.867340, -93.674630), "East": (44.998190, -93.308270)}
 zcta_polygons = {}
 
-# Pygeocode is used to get the coordinates of each zip code
-nomi = pgeocode.Nominatim('us')
-
-
+# TODO: make sure authentication is required for get request
 # the map page
 @bp.route('/zip_editor', methods=['GET', 'POST'])
 @login_required
@@ -36,18 +32,15 @@ def zip_editor():
         new_hub_data = request.json
         for zip, hub in new_hub_data.items():
             redis_client.set("zip:" + zip, hub)
-        return url_for('index')
+        return ""
 
     # Read export.csv, containing all of the data that needs to be assigned
-    # TODO: load from a global pandas table instead
-    data = pd.read_csv(os.path.join(os.path.dirname(__file__), 'data', 'export.csv'))
-
-    # Generate a dictionary with the coordinates of every hub location
-    hub_location_coords = {}
-    for location in HUB_LOCATION_ZIPCODES:
-        query = nomi.query_postal_code(HUB_LOCATION_ZIPCODES[location])
-        assert_available(query)
-        hub_location_coords[location] = (query["latitude"], query["longitude"])
+    try:
+        data = app.mw_to_onfleet.get_mw_csv()
+    except ValueError as e:
+        # Redirect back to the home screen if unable to load CSV data
+        flash(str(e))
+        return redirect(url_for('index'))
 
     # Get a list of all the unique zipcodes in the data set
     zipcodes = data.loc[:, ["Address (Postal Code)"]]
@@ -73,23 +66,19 @@ def zip_editor():
         }
 
         # TODO: load zipcode assignments from the database table, or leave them as "unassigned" if there isn't an entry
+
+        hub_assignment_data[zip] = "unassigned"
         if redis_client.exists("zip:" + zip):
-            hub_assignment_data[zip] = redis_client.get("zip:" + zip)
-        else:
-            hub_assignment_data[zip] = "unassigned"
+            hub = redis_client.get("zip:" + zip)
+            if hub in HUB_LOCATION_COORDS.keys():
+                hub_assignment_data[zip] = redis_client.get("zip:" + zip)
 
         geojson_data.append(data)
 
     return render_template('zip_map.html',
                            geojson_data=geojson_data,
                            hub_assignment_data=hub_assignment_data,
-                           hub_location_data=HUB_LOCATION_ZIPCODES,)
-
-
-def assert_available(query):
-    """Raise an exception if location data can't be received for a zipcode"""
-    if math.isnan(query["latitude"]) or math.isnan(query["longitude"]):
-        raise ValueError("Location data unavailable for zipcode " + str(query["postal_code"]))
+                           hub_location_data=HUB_LOCATION_COORDS,)
 
 
 def init_app():
