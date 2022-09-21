@@ -13,6 +13,9 @@ bp = Blueprint('auth', __name__, url_prefix='/auth')
 # Admins (2) will be able to assign roles, but cannot modify the roles of other admins
 # The owner (3) can modify all roles
 
+# TODO: allow owner to transfer ownership to other users
+
+
 @bp.route('/register', methods=('GET', 'POST'))
 def register():
     if request.method == 'POST':
@@ -43,7 +46,7 @@ def register():
                     'username': username,
                     'password': generate_password_hash(password),
                     'id': user_id,
-                    'permissions': 3 if user_id == 1 else 0,  # 0 is none, 1 is editor, 2 is admin, 3 is original admin
+                    'permissions': 3 if user_id == 1 else 0,  # 0 is none, 1 is editor, 2 is admin, 3 is owner
                     'signup': time.time(),
                 })
                 pipeline.execute()

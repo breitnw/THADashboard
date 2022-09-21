@@ -79,7 +79,7 @@ def get_mw_csv_and_clean():
     #  Add data to the Notes column as JSON #
     #########################################
 
-    # TODO: This should be added to a seperate sheet in the database instead
+    # TODO: This should be added to a separate sheet in the database instead
 
     def if_not_null(val):
         if pd.isnull(val):
@@ -100,8 +100,12 @@ def get_mw_csv_and_clean():
     #  Add the hub assignments from the database #
     ##############################################
 
+    # TODO: Raise an exception if any zipcodes are unavailable
+
     redis_client = current_app.extensions['redis']
     df['Team'] = df.apply(lambda row: redis_client.get('zip:' + str(row['Address (Postal Code)'])), axis=1)
+
+    # TODO: remove any recent orders from the dataframe
 
     return df
 
