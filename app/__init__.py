@@ -2,7 +2,7 @@ import os
 from flask import Flask, redirect, render_template
 from flask_redis import FlaskRedis
 
-from app.auth import login_required
+from app.auth import login_required, editor_required
 
 
 def create_app():
@@ -21,7 +21,7 @@ def create_app():
 
     # the home page
     @app.route('/')
-    @login_required
+    @editor_required
     def index():
         return render_template('index.html')
 

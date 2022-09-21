@@ -8,6 +8,10 @@ import time
 
 bp = Blueprint('auth', __name__, url_prefix='/auth')
 
+# Users without roles (0) will be brought to the landing page
+# Editors (1) will be able to do everything except assign roles
+# Admins (2) will be able to assign roles, but cannot modify the roles of other admins
+# The owner (3) can modify all roles
 
 @bp.route('/register', methods=('GET', 'POST'))
 def register():
@@ -32,19 +36,17 @@ def register():
             if redis_client.hget('users:', l_username):
                 error = f"User {username} is already registered."
             else:
-                # TODO: potentially implement a lock here
                 user_id = redis_client.incr('user:id:')
                 pipeline = redis_client.pipeline(True)
                 pipeline.hset('users:', l_username, user_id)
-                pipeline.hmset('user:%s' % user_id, {
+                pipeline.hmset('user:by_id:%s' % user_id, {
                     'username': username,
                     'password': generate_password_hash(password),
                     'id': user_id,
-                    'admin': 0,
+                    'permissions': 3 if user_id == 1 else 0,  # 0 is none, 1 is editor, 2 is admin, 3 is original admin
                     'signup': time.time(),
                 })
                 pipeline.execute()
-                redis_client.hset("user:" + username, "password", generate_password_hash(password))
                 return redirect(url_for("auth.login"))
         
         flash(error)
@@ -68,7 +70,7 @@ def login():
         if user_id is None:
             error = 'Incorrect username.'
         else:
-            user = redis_client.hgetall('user:%s' % user_id)
+            user = redis_client.hgetall('user:by_id:%s' % user_id)
             if not check_password_hash(user['password'], password):
                 error = 'Incorrect password.'
         
@@ -90,7 +92,7 @@ def load_logged_in_user():
         g.user = None
     else:
         redis_client = current_app.extensions['redis']
-        g.user = user = redis_client.hgetall('user:%s' % user_id)
+        g.user = redis_client.hgetall('user:by_id:%s' % user_id)
 
 
 @bp.route('/logout')
@@ -108,3 +110,69 @@ def login_required(view):
         return view(**kwargs)
     
     return wrapped_view
+
+
+# Landing page for newly signed-up users while they wait to be given editor permissions
+@bp.route('/editor')
+@login_required
+def editor():
+    return render_template('auth/no_permissions.html', message="Thanks for registering! In order to access the dashboard, your account must first be approved by an admin.")
+
+
+def editor_required(view):
+    @functools.wraps(view)
+    def wrapped_view(**kwargs):
+        if g.user is None:
+            return redirect(url_for('auth.login'))
+        elif g.user['permissions'] == '0':
+            return redirect(url_for('auth.editor'))
+
+        return view(**kwargs)
+
+    return wrapped_view
+
+
+# Landing page for editors if they don't have admin permissions
+@bp.route('/admin')
+@editor_required
+def admin():
+    return render_template('auth/no_permissions.html', message="Admin permissions are required to view this page.")
+
+
+def admin_required(view):
+    @functools.wraps(view)
+    def wrapped_view(**kwargs):
+        if g.user is None:
+            return redirect(url_for('auth.login'))
+        elif g.user['permissions'] == '0':
+            return redirect(url_for('auth.editor'))
+        elif g.user['permissions'] == '1':
+            return redirect(url_for('auth.admin'))
+
+        return view(**kwargs)
+
+    return wrapped_view
+
+
+# Page only accessible to admins, where permissions settings can be updated
+@bp.route('/admin_controls', methods=['GET', 'POST'])
+@admin_required
+def admin_controls():
+    redis_client = current_app.extensions['redis']
+
+    if request.method == 'POST':
+        for (user, value) in request.form.items():
+            user_id = redis_client.hget("users:", user)
+            user_key = "user:by_id:%s" % user_id
+            if value == "remove":
+                redis_client.delete(user_key)
+                redis_client.hdel("users:", user)
+            else:
+                redis_client.hset(user_key, 'permissions', value)
+        return redirect(url_for('index'))
+
+    users = redis_client.keys(pattern="user:by_id:*")
+    user_data = []
+    for u in users:
+        user_data.append((redis_client.hget(u, 'username'), redis_client.hget(u, 'permissions')))
+    return render_template('auth/admin_controls.html', user_data=user_data)

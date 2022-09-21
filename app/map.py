@@ -1,11 +1,9 @@
-import pandas as pd
-import math
 import json
 import os
 
-from flask import Blueprint, render_template, url_for, request, current_app, flash, redirect
+from flask import Blueprint, render_template, url_for, request, current_app, flash, redirect, g, jsonify, abort
 
-from app.auth import login_required
+from app.auth import editor_required
 import app.mw_to_onfleet
 
 # TODO: Display the following on the map screen:
@@ -20,21 +18,24 @@ bp = Blueprint('map', __name__, url_prefix='/map')
 HUB_LOCATION_COORDS = {"West": (44.867340, -93.674630), "East": (44.998190, -93.308270)}
 zcta_polygons = {}
 
-# TODO: make sure authentication is required for get request
+
 # the map page
 @bp.route('/zip_editor', methods=['GET', 'POST'])
-@login_required
+@editor_required
 def zip_editor():
     redis_client = current_app.extensions['redis']
 
     # After editing, post the data to the redis database
     if request.method == 'POST':
+        if not g.user or g.user['permissions'] == '0':
+            # If the user isn't logged in, return with an error
+            return abort(403)
         new_hub_data = request.json
         for zip, hub in new_hub_data.items():
             redis_client.set("zip:" + zip, hub)
-        return ""
+        return jsonify(success=True)
 
-    # Read export.csv, containing all of the data that needs to be assigned
+    # Read export.csv, containing all the data that needs to be assigned
     try:
         data = app.mw_to_onfleet.get_mw_csv()
     except ValueError as e:

@@ -187,7 +187,7 @@ function submitToServer() {
             saved = true
             setUISaveStatus(SaveStatus.SAVED)
         } else {
-            alert("unable to save")
+            alert("Unable to save zip code data. Are you logged in?")
             setUISaveStatus(SaveStatus.UNSAVED)
         }
     }

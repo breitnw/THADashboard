@@ -7,10 +7,13 @@ from flask import current_app, Blueprint, url_for, redirect, flash
 import os
 import re
 
+from app.auth import editor_required
+
 bp = Blueprint('data', __name__, url_prefix='/data')
 
 
-@bp.route('/get', methods=['GET'])
+@bp.route('/get')
+@editor_required
 def get():
     try:
         df = get_mw_csv_and_clean()
@@ -19,7 +22,6 @@ def get():
         flash(str(e))
         return redirect(url_for("index"))
 
-    # return
     return df.to_html()
 
 
@@ -29,7 +31,6 @@ def get_mw_csv_and_clean():
     #  Get CSV data from MembershipWorks #
     ######################################
 
-    # df = get_mw_csv("export.csv")
     df = get_mw_csv()
 
     #############################################################
