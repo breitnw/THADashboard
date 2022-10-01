@@ -6,17 +6,15 @@ from flask import Blueprint, render_template, url_for, request, current_app, fla
 from app.auth import editor_required
 import app.mw_to_onfleet
 
+from app.constants import HUB_LOCATION_COORDS
+zcta_polygons = {}
+
 # TODO: Display the following on the map screen:
 # List of unassigned zip codes
 # Total deliveries for each hub
 
 # TODO: load data from database table into CSV file when exporting
 bp = Blueprint('map', __name__, url_prefix='/map')
-
-# West: 7600 Victoria drive, Victoria MN 55386
-# East: 1835 North Penn Avenue, Minneapolis MN 55411
-HUB_LOCATION_COORDS = {"West": (44.867340, -93.674630), "East": (44.998190, -93.308270)}
-zcta_polygons = {}
 
 
 # the map page

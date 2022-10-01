@@ -1,22 +1,25 @@
 import requests
 import pandas as pd
-import math
 import json
+from datetime import datetime
 from io import StringIO
-from flask import current_app, Blueprint, url_for, redirect, flash
+from flask import current_app, Blueprint, url_for, redirect, flash, request
 import os
 import re
 
 from app.auth import editor_required
+from app.constants import HUB_LOCATION_COORDS
 
 bp = Blueprint('data', __name__, url_prefix='/data')
 
 
-@bp.route('/get')
+@bp.route('/get', methods=['POST'])
 @editor_required
 def get():
+    date = datetime.strptime(request.form['cutoff-date'], "%Y-%m-%d")
+    print(date)
     try:
-        df = get_mw_csv_and_clean()
+        df = get_mw_csv_and_clean(date)
     except ValueError as e:
         # Redirect the user back to the home screen if the CSV file couldn't be loaded
         flash(str(e))
@@ -25,24 +28,18 @@ def get():
     return df.to_html()
 
 
-def get_mw_csv_and_clean():
+def get_mw_csv_and_clean(cutoff_date):
 
-    ######################################
-    #  Get CSV data from MembershipWorks #
-    ######################################
+    # Get CSV data from MembershipWorks
 
     df = get_mw_csv()
 
-    #############################################################
-    #  Strip non-alphanumeric characters from the phone numbers #
-    #############################################################
+    #  Strip non-numeric characters from the phone numbers
 
     df['Phone (cell phone preferred for delivery app and reminder texts)'] \
-        = df.apply(lambda row: re.sub(r'[^0-9]', '', row['Phone (cell phone preferred for delivery app and reminder texts)']), axis=1)
+        = df.apply(lambda df_row: re.sub(r'[^0-9]', '', df_row['Phone (cell phone preferred for delivery app and reminder texts)']), axis=1)
 
-    ##############################################################
-    #  Raise an exception for duplicate or invalid phone numbers #
-    ##############################################################
+    #  Raise an exception for duplicate or invalid phone numbers
 
     null_phone_count = df['Phone (cell phone preferred for delivery app and reminder texts)'].isnull().sum()
     if null_phone_count > 0:
@@ -58,26 +55,22 @@ def get_mw_csv_and_clean():
                          # increment indices by 2 to account for pandas series starting at 0 and excel starting at 2
              + " (Each index represents the second occurrence of a number)")
 
-    #####################################################
-    #  Convert the quantities in the CSV data to colors #
-    #####################################################
+    #  Convert the quantities in the CSV data to colors
 
     df['Task Details (Bag Color)'] = ''
 
-    for i in range(len(df.index)):
-        if not math.isnan(df.loc[i, 'Item: Small Bag']):
+    for i, row in df.iterrows():
+        if not pd.isna(row['Item: Small Bag']):
             color = 'White'
-        elif not math.isnan(df.loc[i, 'Item: Medium Bag']):
+        elif not pd.isna(row['Item: Medium Bag']):
             color = 'Green'
-        elif not math.isnan(df.loc[i, 'Item: Large Bag']):
+        elif not pd.isna(row['Item: Large Bag']):
             color = 'Blue'
         else:
             raise ValueError('Bag quantities at row ' + str(i) + ' are invalid')
         df.loc[i, 'Task Details (Bag Color)'] = color
 
-    #########################################
-    #  Add data to the Notes column as JSON #
-    #########################################
+    #  Add data to the Notes column as JSON
 
     # TODO: This should be added to a separate sheet in the database instead
 
@@ -86,26 +79,40 @@ def get_mw_csv_and_clean():
             return ''
         return val
 
-    for i in range(len(df.index)):
+    for i, row in df.iterrows():
         notes = {
-            'notes': if_not_null(df.loc[i, 'Notes']),
-            'county': if_not_null(df.loc[i, 'County']),
-            'referred_by': if_not_null(df.loc[i, 'Referred by (Select 1)']),
-            'referred_by_other_source': if_not_null(df.loc[i, 'Referred by other source?']),
-            'household_size': int(df.loc[i, 'Household Size'])
+            'notes': if_not_null(row['Notes']),
+            'county': if_not_null(row['County']),
+            'referred_by': if_not_null(row['Referred by (Select 1)']),
+            'referred_by_other_source': if_not_null(row['Referred by other source?']),
+            'household_size': int(row['Household Size'])
         }
         df.loc[i, 'Notes'] = json.dumps(notes)
 
-    ##############################################
-    #  Add the hub assignments from the database #
-    ##############################################
-
-    # TODO: Raise an exception if any zipcodes are unavailable
+    #  Use the database to assign values to the Team and Route/Driver column
 
     redis_client = current_app.extensions['redis']
-    df['Team'] = df.apply(lambda row: redis_client.get('zip:' + str(row['Address (Postal Code)'])), axis=1)
+    df['Team'] = ''
 
-    # TODO: remove any recent orders from the dataframe
+    for i, row in df.iterrows():
+        db_hub = redis_client.get('zip:' + str(row['Address (Postal Code)']))
+        if not db_hub or db_hub == 'unassigned':
+            raise ValueError("Error while preparing CSV data for Onfleet: Some zipcodes have not yet been assigned to a hub.")
+
+        # If the Route/Driver column contains one of the hub names (i.e., not an individual), clear that entry in the column
+        # and add the data from the database to the Team column
+        route_driver = row["Route/Driver"]
+        if any(dict_hub in str(route_driver).split() for dict_hub in HUB_LOCATION_COORDS.keys()) or pd.isna(route_driver):
+            df.loc[i, 'Team'] = db_hub
+            df.loc[i, 'Route/Driver'] = ''
+
+    # Remove any orders equally or more recent than a specified cutoff date
+
+    def is_more_recent_than_cutoff(signup_date_str):
+        signup_date = datetime.strptime(signup_date_str, "%d-%b-%y")
+        return signup_date >= cutoff_date
+
+    df = df[df['Date'].apply(lambda val: not is_more_recent_than_cutoff(val))]
 
     return df
 
@@ -128,6 +135,8 @@ def get_mw_csv():
         data = StringIO(req.text)
 
     df = pd.read_csv(data)
+
+    # Flash an error if any of the zipcodes are null
     null_zipcode_count = df['Address (Postal Code)'].isnull().sum()
     if null_zipcode_count > 0:
         raise ValueError("Error while loading CSV data from MembershipWorks: There were "
