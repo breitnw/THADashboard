@@ -16,9 +16,9 @@
     <a href="{{ url_for('map.zip_editor') }}">Map</a>
     <br><br>
 
-    <a class="button" href="#popup1"><button>Send Data to Onfleet</button></a>
+    <a class="button" href="#cutoff-popup"><button>Send Data to Onfleet</button></a>
 
-    <div id="popup1" class="overlay">
+    <div id="cutoff-popup" class="overlay">
         <div class="popup">
             <h1>Select a cutoff date</h1>
             <a class="close" href="#">&times;</a>
@@ -27,7 +27,7 @@
                 <form action="{{ url_for('data.get') }}" method="post">
                     <label for="cutoff-date">Cutoff Date</label>
                     <input type="date" id="cutoff-date" name="cutoff-date" required>
-                    <input type="submit" value="Submit">
+                    <input type="submit" value="Send Data">
                 </form>
             </div>
         </div>
