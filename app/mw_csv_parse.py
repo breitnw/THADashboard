@@ -4,10 +4,12 @@ import json
 from datetime import datetime
 from io import StringIO
 from flask import current_app, Blueprint, url_for, redirect, flash, request
+from onfleet import Onfleet
 import os
 import re
 
 from app.auth import editor_required
+from app.onfleet_upload import send_data
 from app.constants import HUB_LOCATION_COORDS
 
 bp = Blueprint('data', __name__, url_prefix='/data')
@@ -25,11 +27,11 @@ def get():
         flash(str(e))
         return redirect(url_for("index"))
 
+    send_data(df)
     return df.to_html()
 
 
 def get_mw_csv_and_clean(cutoff_date):
-
     # Get CSV data from MembershipWorks
 
     df = get_mw_csv()
@@ -37,23 +39,25 @@ def get_mw_csv_and_clean(cutoff_date):
     #  Strip non-numeric characters from the phone numbers
 
     df['Phone (cell phone preferred for delivery app and reminder texts)'] \
-        = df.apply(lambda df_row: re.sub(r'[^0-9]', '', df_row['Phone (cell phone preferred for delivery app and reminder texts)']), axis=1)
+        = df.apply(lambda df_row: re.sub(r'[^0-9]', '',
+                                         df_row['Phone (cell phone preferred for delivery app and reminder texts)']),
+                   axis=1)
 
     #  Raise an exception for duplicate or invalid phone numbers
 
     null_phone_count = df['Phone (cell phone preferred for delivery app and reminder texts)'].isnull().sum()
     if null_phone_count > 0:
         raise ValueError("Error while loading CSV data from MembershipWorks: There were "
-             + str(null_phone_count)
-             + " phone numbers that could not be read.")
+                         + str(null_phone_count)
+                         + " phone numbers that could not be read.")
 
     duplicate_phone_s = df.duplicated('Phone (cell phone preferred for delivery app and reminder texts)')
     duplicated_number_indices = duplicate_phone_s[duplicate_phone_s].index.tolist()
     if len(duplicated_number_indices) > 0:
         raise ValueError("Error while loading CSV data from MembershipWorks: There are duplicate phone numbers at rows "
-             + str(list(map(lambda x: x + 2, duplicated_number_indices)))
+                         + str(list(map(lambda x: x + 2, duplicated_number_indices)))
                          # increment indices by 2 to account for pandas series starting at 0 and excel starting at 2
-             + " (Each index represents the second occurrence of a number)")
+                         + " (Each index represents the second occurrence of a number)")
 
     #  Convert the quantities in the CSV data to colors
 
@@ -97,12 +101,14 @@ def get_mw_csv_and_clean(cutoff_date):
     for i, row in df.iterrows():
         db_hub = redis_client.get('zip:' + str(row['Address (Postal Code)']))
         if not db_hub or db_hub == 'unassigned':
-            raise ValueError("Error while preparing CSV data for Onfleet: Some zipcodes have not yet been assigned to a hub.")
+            raise ValueError(
+                "Error while preparing CSV data for Onfleet: Some zipcodes have not yet been assigned to a hub.")
 
         # If the Route/Driver column contains one of the hub names (i.e., not an individual), clear that entry in the column
         # and add the data from the database to the Team column
         route_driver = row["Route/Driver"]
-        if any(dict_hub in str(route_driver).split() for dict_hub in HUB_LOCATION_COORDS.keys()) or pd.isna(route_driver):
+        if any(dict_hub in str(route_driver).split() for dict_hub in HUB_LOCATION_COORDS.keys()) or pd.isna(
+                route_driver):
             df.loc[i, 'Team'] = db_hub
             df.loc[i, 'Route/Driver'] = ''
 
@@ -140,6 +146,6 @@ def get_mw_csv():
     null_zipcode_count = df['Address (Postal Code)'].isnull().sum()
     if null_zipcode_count > 0:
         raise ValueError("Error while loading CSV data from MembershipWorks: There were "
-              + str(null_zipcode_count)
-              + " value(s) in the 'Address (Postal Code)' column that could not be read.")
+                         + str(null_zipcode_count)
+                         + " value(s) in the 'Address (Postal Code)' column that could not be read.")
     return df

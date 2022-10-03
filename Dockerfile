@@ -8,16 +8,18 @@ COPY requirements.txt /var/www/
 
 RUN pip install --upgrade pip
 RUN apt-get update
-#RUN apt-get -y install libsasl2-dev libldap2-dev libssl-dev
 RUN pip install -r requirements.txt
 
 RUN addgroup --gid $GROUP_ID www
 RUN adduser --disabled-password --uid $USER_ID --gid $GROUP_ID www --shell /bin/sh
 
 COPY app /var/www/app
+COPY gunicorn.sh /var/www/
+
+RUN chown -R $USER_ID:$GROUP_ID /var/www/
 
 USER www
 EXPOSE 5000
 
-#CMD [ "gunicorn", "--config", "gunicorn-cfg.py", "run:app"]
-CMD [ "flask", "run", "--host", "0.0.0.0"]
+#CMD [ "flask", "run", "--host", "0.0.0.0"]
+ENTRYPOINT ["./gunicorn.sh"]

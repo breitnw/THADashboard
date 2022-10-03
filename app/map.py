@@ -4,7 +4,7 @@ import os
 from flask import Blueprint, render_template, url_for, request, current_app, flash, redirect, g, jsonify, abort
 
 from app.auth import editor_required
-import app.mw_to_onfleet
+import app.mw_csv_parse
 
 from app.constants import HUB_LOCATION_COORDS
 zcta_polygons = {}
@@ -35,7 +35,7 @@ def zip_editor():
 
     # Read export.csv, containing all the data that needs to be assigned
     try:
-        data = app.mw_to_onfleet.get_mw_csv()
+        data = app.mw_csv_parse.get_mw_csv()
     except ValueError as e:
         # Redirect back to the home screen if unable to load CSV data
         flash(str(e))

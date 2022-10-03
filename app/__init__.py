@@ -1,6 +1,7 @@
 import os
 from flask import Flask, redirect, render_template
 from flask_redis import FlaskRedis
+from onfleet import Onfleet
 
 from app.auth import login_required, editor_required
 
@@ -9,15 +10,14 @@ def create_app():
     # create and configure the app
     app = Flask(__name__)
     app.config.from_mapping(
-        # TODO: make sure to change the secret key later (see tutorial)
         SECRET_KEY=os.environ.get('SECRET_KEY', 'dev'),
-        REDIS_URL=os.environ.get('REDIS_URL', 'redis://redis_db:6379')
+        REDIS_URL=os.environ.get('REDIS_URL', 'redis://redis_db:6379'),
+        ONFLEET_API_KEY=os.environ.get('ONFLEET_API_KEY'),
     )
-    # load the instance config, if it exists
-    app.config.from_pyfile('config.py', silent=True)
 
-    # initialize Redis (work in progress)
+    # initialize Redis and Onfleet
     FlaskRedis(app, decode_responses=True)
+    app.extensions["onfleet"] = Onfleet(app.config["ONFLEET_API_KEY"])
 
     # the home page
     @app.route('/')
@@ -32,7 +32,7 @@ def create_app():
     app.register_blueprint(map.bp)
     map.init_app()
 
-    from . import mw_to_onfleet
-    app.register_blueprint(mw_to_onfleet.bp)
+    from . import mw_csv_parse
+    app.register_blueprint(mw_csv_parse.bp)
 
     return app
