@@ -32,7 +32,7 @@ def create_app():
     app.register_blueprint(map.bp)
     map.init_app()
 
-    from . import mw_csv_parse
-    app.register_blueprint(mw_csv_parse.bp)
+    from . import onfleet
+    app.register_blueprint(onfleet.bp)
 
     return app

@@ -1,50 +1,29 @@
 import requests
 import pandas as pd
-import json
 from datetime import datetime
 from io import StringIO
-from flask import current_app, Blueprint, url_for, redirect, flash, request
-from onfleet import Onfleet
+from flask import current_app
+import math
 import os
 import re
 
-from app.auth import editor_required
-from app.onfleet_upload import send_data
 from app.constants import HUB_LOCATION_COORDS
 
-bp = Blueprint('data', __name__, url_prefix='/data')
-
-
-@bp.route('/get', methods=['POST'])
-@editor_required
-def get():
-    date = datetime.strptime(request.form['cutoff-date'], "%Y-%m-%d")
-    print(date)
-    try:
-        df = get_mw_csv_and_clean(date)
-    except ValueError as e:
-        # Redirect the user back to the home screen if the CSV file couldn't be loaded
-        flash(str(e))
-        return redirect(url_for("index"))
-
-    send_data(df)
-    return df.to_html()
+# Set this to True to use the local copy of export.csv
+USE_LOCAL_CSV = True
 
 
 def get_mw_csv_and_clean(cutoff_date):
-    # Get CSV data from MembershipWorks
-
+    # Get CSV data from MembershipWorks ====================================================================
     df = get_mw_csv()
 
-    #  Strip non-numeric characters from the phone numbers
-
+    #  Strip non-numeric characters from the phone numbers =================================================
     df['Phone (cell phone preferred for delivery app and reminder texts)'] \
         = df.apply(lambda df_row: re.sub(r'[^0-9]', '',
                                          df_row['Phone (cell phone preferred for delivery app and reminder texts)']),
                    axis=1)
 
-    #  Raise an exception for duplicate or invalid phone numbers
-
+    #  Raise an exception for duplicate or invalid phone numbers ===========================================
     null_phone_count = df['Phone (cell phone preferred for delivery app and reminder texts)'].isnull().sum()
     if null_phone_count > 0:
         raise ValueError("Error while loading CSV data from MembershipWorks: There were "
@@ -59,9 +38,8 @@ def get_mw_csv_and_clean(cutoff_date):
                          # increment indices by 2 to account for pandas series starting at 0 and excel starting at 2
                          + " (Each index represents the second occurrence of a number)")
 
-    #  Convert the quantities in the CSV data to colors
-
-    df['Task Details (Bag Color)'] = ''
+    #  Convert the quantities in the CSV data to colors ====================================================
+    df['Task Details (Bag Color)'] = math.nan
 
     for i, row in df.iterrows():
         if not pd.isna(row['Item: Small Bag']):
@@ -74,29 +52,9 @@ def get_mw_csv_and_clean(cutoff_date):
             raise ValueError('Bag quantities at row ' + str(i) + ' are invalid')
         df.loc[i, 'Task Details (Bag Color)'] = color
 
-    #  Add data to the Notes column as JSON
-
-    # TODO: This should be added to a separate sheet in the database instead
-
-    def if_not_null(val):
-        if pd.isnull(val):
-            return ''
-        return val
-
-    for i, row in df.iterrows():
-        notes = {
-            'notes': if_not_null(row['Notes']),
-            'county': if_not_null(row['County']),
-            'referred_by': if_not_null(row['Referred by (Select 1)']),
-            'referred_by_other_source': if_not_null(row['Referred by other source?']),
-            'household_size': int(row['Household Size'])
-        }
-        df.loc[i, 'Notes'] = json.dumps(notes)
-
-    #  Use the database to assign values to the Team and Route/Driver column
-
+    #  Use the database to assign values to the Team and Route/Driver column ===============================
     redis_client = current_app.extensions['redis']
-    df['Team'] = ''
+    df['Team'] = math.nan
 
     for i, row in df.iterrows():
         db_hub = redis_client.get('zip:' + str(row['Address (Postal Code)']))
@@ -107,13 +65,11 @@ def get_mw_csv_and_clean(cutoff_date):
         # If the Route/Driver column contains one of the hub names (i.e., not an individual), clear that entry in the column
         # and add the data from the database to the Team column
         route_driver = row["Route/Driver"]
-        if any(dict_hub in str(route_driver).split() for dict_hub in HUB_LOCATION_COORDS.keys()) or pd.isna(
-                route_driver):
+        if any(dict_hub in str(route_driver).split() for dict_hub in HUB_LOCATION_COORDS.keys()) or pd.isna(route_driver):  # TODO: doesn't work
             df.loc[i, 'Team'] = db_hub
-            df.loc[i, 'Route/Driver'] = ''
+            df.loc[i, 'Route/Driver'] = math.nan
 
-    # Remove any orders equally or more recent than a specified cutoff date
-
+    # Remove any orders equally or more recent than a specified cutoff date ================================
     def is_more_recent_than_cutoff(signup_date_str):
         signup_date = datetime.strptime(signup_date_str, "%d-%b-%y")
         return signup_date >= cutoff_date
@@ -124,9 +80,7 @@ def get_mw_csv_and_clean(cutoff_date):
 
 
 def get_mw_csv():
-    # Set this to True to use the local copy of export.csv
-    use_local = True
-    if use_local:
+    if USE_LOCAL_CSV:
         with open(os.path.join(os.path.dirname(__file__), "data", "export.csv")) as f:
             data = StringIO(f.read())
     else:
