@@ -21,7 +21,6 @@ def create():
 
     create_tasks(df)
 
-    webbrowser.open_new_tab('https://onfleet.com/dashboard#/table')
     # TODO: dataframe is only displayed for testing purposes, should ideally redirect to index.html instead
     return df.to_html()
 
@@ -86,8 +85,8 @@ def create_tasks(df, onfleet=None):
 
         tasks.append(task)
 
-    import json
-    print(json.dumps(tasks, indent=4))
+    # import json
+    # print(json.dumps(tasks, indent=4))
     # onfleet.tasks.batchCreate(body={"tasks": tasks})
 
     store_supplemental_data(df)

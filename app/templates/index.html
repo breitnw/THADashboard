@@ -14,7 +14,15 @@
     {% endif %}
 
     <a href="{{ url_for('map.zip_editor') }}">Map</a>
-    <br><br>
+
+    <br>
+    <br>
+
+    <script>
+    function openOnfleet(){
+        window.open("https://onfleet.com/dashboard#/table", "_blank")
+    }
+    </script>
 
     <a class="button" href="#cutoff-popup"><button>Send Data to Onfleet</button></a>
 
@@ -24,7 +32,7 @@
             <a class="close" href="#">&times;</a>
             <div class="popup-content">
                 Any signups on or after the selected date will NOT be included in the data sent to Onfleet.
-                <form action="{{ url_for('tasks.create') }}" method="post">
+                <form action="{{ url_for('tasks.create') }}" method="post" onsubmit="openOnfleet()">
                     <label for="cutoff-date">Cutoff Date</label>
                     <input type="date" id="cutoff-date" name="cutoff-date" required>
                     <input type="submit" value="Send Data">

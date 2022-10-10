@@ -1,5 +1,5 @@
 import os
-from flask import Flask, redirect, render_template
+from flask import Flask, render_template
 from flask_redis import FlaskRedis
 from onfleet import Onfleet
 
@@ -32,7 +32,7 @@ def create_app():
     app.register_blueprint(map.bp)
     map.init_app()
 
-    from . import onfleet
-    app.register_blueprint(onfleet.bp)
+    from . import onfleet_upload
+    app.register_blueprint(onfleet_upload.bp)
 
     return app
