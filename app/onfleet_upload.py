@@ -89,7 +89,8 @@ def create_tasks(df, onfleet=None):
 
     try:
         onfleet.tasks.batchCreate(body={"tasks": tasks})
-    except JSONDecodeError:
+    except (JSONDecodeError, KeyError):
+        # TODO: it's unknown why these errors occasionally occur, they might present problems in the future if ignored
         pass
 
     store_supplemental_data(df)
