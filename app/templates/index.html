@@ -19,8 +19,10 @@
     <br>
 
     <script>
-    function openOnfleet(){
-        window.open("https://onfleet.com/dashboard#/table", "_blank")
+    function submitForm(){
+        document.getElementById("lds").style.visibility = "visible"
+        document.getElementById("submit-button").value = "Sending..."
+        document.getElementById("submit-button").disabled = true
     }
     </script>
 
@@ -32,10 +34,13 @@
             <a class="close" href="#">&times;</a>
             <div class="popup-content">
                 Any signups on or after the selected date will NOT be included in the data sent to Onfleet.
-                <form action="{{ url_for('tasks.create') }}" method="post" onsubmit="openOnfleet()">
+                <form action="{{ url_for('tasks.create') }}" method="post" onsubmit="submitForm()">
                     <label for="cutoff-date">Cutoff Date</label>
                     <input type="date" id="cutoff-date" name="cutoff-date" required>
-                    <input type="submit" value="Send Data">
+                    <span>
+                        <input type="submit" value="Send Data" id="submit-button">
+                        <div id="lds" class="lds-ellipsis"><div></div><div></div><div></div><div></div></div>
+                    </span>
                 </form>
             </div>
         </div>

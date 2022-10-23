@@ -10,7 +10,7 @@ import re
 from app.constants import HUB_LOCATION_COORDS
 
 # Set this to True to use the local copy of export.csv
-USE_LOCAL_CSV = True
+USE_LOCAL_CSV = False
 
 
 def get_mw_csv_and_clean(cutoff_date):
@@ -71,7 +71,7 @@ def get_mw_csv_and_clean(cutoff_date):
 
     # Remove any orders equally or more recent than a specified cutoff date ================================
     def is_more_recent_than_cutoff(signup_date_str):
-        signup_date = datetime.strptime(signup_date_str, "%d-%b-%y")
+        signup_date = datetime.strptime(signup_date_str, "%b %d, %Y")
         return signup_date >= cutoff_date
 
     df = df[df['Date'].apply(lambda val: not is_more_recent_than_cutoff(val))]

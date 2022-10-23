@@ -2,7 +2,7 @@ from flask import current_app, Blueprint, url_for, redirect, flash, request
 from app.auth import editor_required
 from app.mw_csv_parse import get_mw_csv_and_clean
 import pandas as pd
-import webbrowser
+from json.decoder import JSONDecodeError
 from datetime import datetime
 
 bp = Blueprint('tasks', __name__, url_prefix='/tasks')
@@ -21,8 +21,10 @@ def create():
 
     create_tasks(df)
 
-    # TODO: dataframe is only displayed for testing purposes, should ideally redirect to index.html instead
-    return df.to_html()
+    # dataframe is only displayed for testing purposes, should redirect to index.html instead
+    # return df.to_html()
+
+    return redirect("https://onfleet.com/dashboard#/table")
 
 
 def create_tasks(df, onfleet=None):
@@ -57,7 +59,7 @@ def create_tasks(df, onfleet=None):
                     "street": ' '.join(row["Address (Street)"].split()[1:]),
                     "city": row["Address (City)"],
                     "state": row["Address (State/Province)"],
-                    "postalCode": row["Address (Postal Code)"],
+                    "postalCode": str(row["Address (Postal Code)"]),
                     "country": row["Address (Country)"],
                 },
             },
@@ -85,9 +87,10 @@ def create_tasks(df, onfleet=None):
 
         tasks.append(task)
 
-    # import json
-    # print(json.dumps(tasks, indent=4))
-    # onfleet.tasks.batchCreate(body={"tasks": tasks})
+    try:
+        onfleet.tasks.batchCreate(body={"tasks": tasks})
+    except JSONDecodeError:
+        pass
 
     store_supplemental_data(df)
 
