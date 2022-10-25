@@ -91,6 +91,8 @@ def get_mw_csv():
             'Referer': 'https://membershipworks.com/',
         }
         url = 'https://api.membershipworks.com/v1/csv?SF=CqQWGT-YS7JxJ_bUsfioO19G7RRw20fxFqwfydzIOsevPF71KzKIEwB3pOXj0FhV&_rt=946706400&frm=618575991ea12250a05d87dd'
+        # Humanity Alliance Wifi
+        # url = 'https://api.membershipworks.com/v1/csv?SF=2hGHUxkkItCToDtgVpnsQcrh7wbgaH8c95t4AVWVH0sK4moo53MD1guqR1ZY73e2&_rt=946706400&frm=618575991ea12250a05d87dd'
         req = requests.get(url, headers=headers)
         data = StringIO(req.text)
 
