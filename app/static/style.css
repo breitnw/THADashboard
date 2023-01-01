@@ -14,6 +14,7 @@ h1 {
     color: #377ba8;
     margin: 1rem 0;
 }
+
 a {
     color: #377ba8;
 }
@@ -34,6 +35,14 @@ nav h1 {
 nav h1 a {
     text-decoration: none;
     padding: 0.25rem 0.5rem;
+}
+nav a {
+    flex: auto;
+    margin: 0;
+}
+nav a img {
+    margin: 0.5rem 0 0.3rem 0.5rem;
+    width: 7rem;
 }
 nav ul  {
     display: flex;

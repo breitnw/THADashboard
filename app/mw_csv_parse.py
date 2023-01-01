@@ -7,7 +7,7 @@ import math
 import os
 import re
 
-from app.constants import HUB_LOCATION_COORDS
+from app.constants import HUB_LOCATION_COORDS, ROUTE_DRIVER_HUBS
 
 # Set this to True to use the local copy of export.csv
 USE_LOCAL_CSV = False
@@ -65,7 +65,8 @@ def get_mw_csv_and_clean(cutoff_date):
         # If the Route/Driver column contains one of the hub names (i.e., not an individual), clear that entry in the column
         # and add the data from the database to the Team column
         route_driver = row["Route/Driver"]
-        if any(dict_hub in str(route_driver).split() for dict_hub in HUB_LOCATION_COORDS.keys()) or pd.isna(route_driver):  # TODO: doesn't work
+        # TODO: possibly clean up this method for determining hubs/individual drivers
+        if any(hub_name in str(route_driver).split() for hub_name in ROUTE_DRIVER_HUBS) or pd.isna(route_driver):
             df.loc[i, 'Team'] = db_hub
             df.loc[i, 'Route/Driver'] = math.nan
 
@@ -90,9 +91,7 @@ def get_mw_csv():
             'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/104.0.0.0 Safari/537.36',
             'Referer': 'https://membershipworks.com/',
         }
-        url = 'https://api.membershipworks.com/v1/csv?SF=CqQWGT-YS7JxJ_bUsfioO19G7RRw20fxFqwfydzIOsevPF71KzKIEwB3pOXj0FhV&_rt=946706400&frm=618575991ea12250a05d87dd'
-        # Humanity Alliance Wifi
-        # url = 'https://api.membershipworks.com/v1/csv?SF=2hGHUxkkItCToDtgVpnsQcrh7wbgaH8c95t4AVWVH0sK4moo53MD1guqR1ZY73e2&_rt=946706400&frm=618575991ea12250a05d87dd'
+        url = current_app.config["MEMBERSHIPWORKS_API_URL"]
         req = requests.get(url, headers=headers)
         data = StringIO(req.text)
 

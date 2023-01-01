@@ -9,3 +9,5 @@ as `docker-compose.yml`). Two values must be added to the file:
 - Add the line `SECRET_KEY=MY_SECRET` to the file, replacing `MY_SECRET` with a secure key. One way
 to generate such a key is via `python3 -c "import secrets; print(secrets.token_hex())"`.
 - Add the line `ONFLEET_API_KEY=MY_KEY`, replacing MY_KEY with an API key for Onfleet.
+- Add the line `MEMBERSHIPWORKS_API_URL=MY_URL`, replacing MY_URL with a GET request for a MembershipWorks CSV file. This
+workaround is necessary because MembershipWorks lacks a user-friendly API, so URLs must be generated on a per-network basis.

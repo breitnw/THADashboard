@@ -19,7 +19,12 @@ def create():
         flash(str(e))
         return redirect(url_for("index"))
 
-    create_tasks(df)
+    try:
+        create_tasks(df)
+    except ValueError as e:
+        # Redirect the user back to the home screen if a worker or hub couldn't be found
+        flash(str(e))
+        return redirect(url_for("index"))
 
     # dataframe is only displayed for testing purposes, should redirect to index.html instead
     # return df.to_html()
@@ -40,14 +45,21 @@ def create_tasks(df, onfleet=None):
     for i, row in df.iterrows():
         if not pd.isna(row["Route/Driver"]):
             worker = row["Route/Driver"]
-            worker_id = next(filter(lambda w: w["name"] == worker, workers))["id"]
+            try:
+                worker_id = next(filter(lambda w: w["name"] == worker, workers))["id"]
+            except StopIteration:
+                raise ValueError("Invalid worker name \'" + worker + "\' in uploaded data. All manually assigned worker names must be present in Onfleet before upload.")
             container = {
                 "type": "WORKER",
                 "worker": worker_id,
             }
         else:
             team = row["Team"]
-            team_id = next(filter(lambda t: t["name"] == team, teams))["id"]
+            try:
+                team_id = next(filter(lambda t: t["name"] == team, teams))["id"]
+            except StopIteration:
+                team_names = [t["name"] for t in teams]
+                raise ValueError("Invalid team name in uploaded data. Available names are " + str(team_names) + ", found \'" + team + "\'")
             container = {
                 "type": "TEAM",
                 "team": team_id,

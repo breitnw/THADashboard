@@ -13,6 +13,7 @@ def create_app():
         SECRET_KEY=os.environ.get('SECRET_KEY', 'dev'),
         REDIS_URL=os.environ.get('REDIS_URL', 'redis://redis_db:6379'),
         ONFLEET_API_KEY=os.environ.get('ONFLEET_API_KEY'),
+        MEMBERSHIPWORKS_API_URL=os.environ.get('MEMBERSHIPWORKS_API_URL'),
     )
 
     # initialize Redis and Onfleet
