@@ -14,6 +14,7 @@ def create_app():
         REDIS_URL=os.environ.get('REDIS_URL', 'redis://redis_db:6379'),
         ONFLEET_API_KEY=os.environ.get('ONFLEET_API_KEY'),
         MEMBERSHIPWORKS_API_URL=os.environ.get('MEMBERSHIPWORKS_API_URL'),
+        DEBUG_MODE=False if os.environ.get('DEBUG_MODE', 'False') == 'False' else True,
     )
 
     # initialize Redis and Onfleet
@@ -35,5 +36,8 @@ def create_app():
 
     from . import onfleet_upload
     app.register_blueprint(onfleet_upload.bp)
+
+    from . import admin
+    app.register_blueprint(admin.bp)
 
     return app

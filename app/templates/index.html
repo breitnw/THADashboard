@@ -9,7 +9,7 @@
     <p>{{ g.user }}</p>
 
     {% if g.user['permissions'] == '2' or g.user['permissions'] == '3' %}
-        <a href="{{ url_for('auth.admin_controls') }}">Admin Controls</a>
+        <a href="{{ url_for('admin.controls') }}">Admin Controls</a>
         <br>
     {% endif %}
 

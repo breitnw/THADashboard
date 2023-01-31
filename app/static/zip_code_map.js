@@ -21,8 +21,8 @@ L.tileLayer('https://api.maptiler.com/maps/pastel/{z}/{x}/{y}.png?key=Lpwn9fHg25
 
 // Add markers to the map representing the locations of the hubs
 let hubMarkers = []
-for (let key in hubLocationData) {
-    let location = hubLocationData[key]
+for (let key in hubInfo) {
+    let location = hubInfo[key][1]
     let marker = new L.CircleMarker(location, {radius: 5})
             .bindPopup('Hub: ' + key)
             .addTo(map)
@@ -57,7 +57,7 @@ function mouseOut(e) {
 
 function resetHighlight(layer) {
     layer.setStyle(style(layer.feature));
-    if (hubData[layer.feature.properties.zip] !== "unassigned") {
+    if (hubAssignmentData[layer.feature.properties.zip] !== "unassigned") {
         if (!L.Browser.ie && !L.Browser.opera && !L.Browser.edge) {
             layer.bringToBack();
         }
@@ -67,7 +67,7 @@ function resetHighlight(layer) {
 function setHub(e) {
     let feature = e.target.feature
     // Set the new hub both in the feature's properties and in the dict
-    hubData[feature.properties.zip] = (hubData[feature.properties.zip] === hubSelector.value) ? "unassigned" : hubSelector.value
+    hubAssignmentData[feature.properties.zip] = (hubAssignmentData[feature.properties.zip] === hubSelector.value) ? "unassigned" : hubSelector.value
     // Update the element's style
     e.target.setStyle(style(feature));
     // Set 'saved' to reflect a change has been made without saving
@@ -77,7 +77,7 @@ function setHub(e) {
 }
 
 function style(feature) {
-    let hub = hubData[feature.properties.zip]
+    let hub = hubAssignmentData[feature.properties.zip]
 
     let color = "#999999"
     let borderColor = "#FFFFFF"
@@ -157,7 +157,7 @@ info.onAdd = function (map) {
 info.update = function (props) {
     this._div.innerHTML = '<h4>Details</h4>' + (props ?
         '<b>' + props.zip + '</b><br>' + props.count + (props.count === '1' ? ' delivery' : ' deliveries') +
-        '<br>' + 'hub: ' + hubData[props.zip]
+        '<br>' + 'hub: ' + hubInfo[hubAssignmentData[props.zip]][0]
         : 'Hover over a ZIP Code'
     );
 };
@@ -166,10 +166,10 @@ info.addTo(map);
 
 // Make a POST request to the server if all the zip codes have been assigned
 function submitToServer() {
-    if (Object.values(hubData).includes("unassigned")) {
+    if (Object.values(hubAssignmentData).includes("unassigned")) {
         let err = "The following ZIP Codes still need to be assigned before saving:"
-        for (let key in hubData) {
-            if (hubData[key] === "unassigned") {
+        for (let key in hubAssignmentData) {
+            if (hubAssignmentData[key] === "unassigned") {
                 err += "\n- " + key
             }
         }
@@ -191,7 +191,7 @@ function submitToServer() {
             setUISaveStatus(SaveStatus.UNSAVED)
         }
     }
-    xhr.send(JSON.stringify(hubData));
+    xhr.send(JSON.stringify(hubAssignmentData));
 }
 
 // Change the UI depending on if the map is saved, saving, or unsaved

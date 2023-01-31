@@ -6,7 +6,6 @@ from flask import Blueprint, render_template, url_for, request, current_app, fla
 from app.auth import editor_required
 import app.mw_csv_parse
 
-from app.constants import HUB_LOCATION_COORDS
 zcta_polygons = {}
 
 # TODO: Display the following on the map screen:
@@ -22,6 +21,13 @@ bp = Blueprint('map', __name__, url_prefix='/map')
 @editor_required
 def zip_editor():
     redis_client = current_app.extensions['redis']
+
+    hubs = redis_client.keys(pattern="hub:by_id:*")
+    hub_info = {}
+    for h in hubs:
+        hub_idx = h[10:]
+        (name, lat, long) = list(redis_client.hgetall(h).values())
+        hub_info[hub_idx] = (name, (lat, long))
 
     # After editing, post the data to the redis database
     if request.method == 'POST':
@@ -69,15 +75,17 @@ def zip_editor():
         hub_assignment_data[zip] = "unassigned"
         if redis_client.exists("zip:" + zip):
             hub = redis_client.get("zip:" + zip)
-            if hub in HUB_LOCATION_COORDS.keys():
+            if hub in hub_info.keys():
                 hub_assignment_data[zip] = redis_client.get("zip:" + zip)
 
         geojson_data.append(data)
 
+    print(hub_info)
+
     return render_template('zip_map.html',
                            geojson_data=geojson_data,
                            hub_assignment_data=hub_assignment_data,
-                           hub_location_data=HUB_LOCATION_COORDS,)
+                           hub_info=hub_info)
 
 
 def init_app():

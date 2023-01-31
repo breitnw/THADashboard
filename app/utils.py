@@ -6,3 +6,10 @@ HUB_LOCATION_COORDS = {"LODGE": (44.867340, -93.674630), "NORTH POINT": (44.9981
 
 # The hub names that appear in the "Route/Driver" column in MembershipWorks. Used to filter out individual drivers from hubs.
 ROUTE_DRIVER_HUBS = ["West", "East"]
+
+
+def safe_incr(redis_client, key):
+    value = ''
+    while value == '':
+        value = redis_client.incr(key)
+    return value

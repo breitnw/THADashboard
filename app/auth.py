@@ -5,6 +5,7 @@ from flask import (
 from werkzeug.security import check_password_hash, generate_password_hash
 import time
 
+from app.utils import safe_incr
 
 bp = Blueprint('auth', __name__, url_prefix='/auth')
 
@@ -36,12 +37,12 @@ def register():
             flash('Password must be eight characters or longer.')
         
         if error is None:
-            if redis_client.hget('users:', l_username):
+            if redis_client.hget('users', l_username):
                 error = f"User {username} is already registered."
             else:
-                user_id = redis_client.incr('user:id:')
+                user_id = safe_incr(redis_client, 'user:id')
                 pipeline = redis_client.pipeline(True)
-                pipeline.hset('users:', l_username, user_id)
+                pipeline.hset('users', l_username, user_id)
                 pipeline.hmset('user:by_id:%s' % user_id, {
                     'username': username,
                     'password': generate_password_hash(password),
@@ -68,7 +69,7 @@ def login():
 
         error = None
         user = None
-        user_id = redis_client.hget('users:', l_username)
+        user_id = redis_client.hget('users', l_username)
 
         if user_id is None:
             error = 'Incorrect username.'
@@ -155,27 +156,3 @@ def admin_required(view):
         return view(**kwargs)
 
     return wrapped_view
-
-
-# Page only accessible to admins, where permissions settings can be updated
-@bp.route('/admin_controls', methods=['GET', 'POST'])
-@admin_required
-def admin_controls():
-    redis_client = current_app.extensions['redis']
-
-    if request.method == 'POST':
-        for (user, value) in request.form.items():
-            user_id = redis_client.hget("users:", user)
-            user_key = "user:by_id:%s" % user_id
-            if value == "remove":
-                redis_client.delete(user_key)
-                redis_client.hdel("users:", user)
-            else:
-                redis_client.hset(user_key, 'permissions', value)
-        return redirect(url_for('index'))
-
-    users = redis_client.keys(pattern="user:by_id:*")
-    user_data = []
-    for u in users:
-        user_data.append((redis_client.hget(u, 'username'), redis_client.hget(u, 'permissions')))
-    return render_template('auth/admin_controls.html', user_data=user_data)

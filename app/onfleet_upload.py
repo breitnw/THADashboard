@@ -19,15 +19,15 @@ def create():
         flash(str(e))
         return redirect(url_for("index"))
 
+    if current_app.config["DEBUG_MODE"]:
+        return df.to_html()
+
     try:
         create_tasks(df)
     except ValueError as e:
         # Redirect the user back to the home screen if a worker or hub couldn't be found
         flash(str(e))
         return redirect(url_for("index"))
-
-    # dataframe is only displayed for testing purposes, should redirect to index.html instead
-    # return df.to_html()
 
     return redirect("https://onfleet.com/dashboard#/table")
 
@@ -48,7 +48,8 @@ def create_tasks(df, onfleet=None):
             try:
                 worker_id = next(filter(lambda w: w["name"] == worker, workers))["id"]
             except StopIteration:
-                raise ValueError("Invalid worker name \'" + worker + "\' in uploaded data. All manually assigned worker names must be present in Onfleet before upload.")
+                raise ValueError(
+                    "Invalid worker name \'" + worker + "\' in uploaded data. All manually assigned worker names must be present in Onfleet before upload.")
             container = {
                 "type": "WORKER",
                 "worker": worker_id,
@@ -59,7 +60,8 @@ def create_tasks(df, onfleet=None):
                 team_id = next(filter(lambda t: t["name"] == team, teams))["id"]
             except StopIteration:
                 team_names = [t["name"] for t in teams]
-                raise ValueError("Invalid team name in uploaded data. Available names are " + str(team_names) + ", found \'" + team + "\'")
+                raise ValueError("Invalid team name in uploaded data. Available names are " + str(
+                    team_names) + ", found \'" + team + "\'")
             container = {
                 "type": "TEAM",
                 "team": team_id,
@@ -81,7 +83,8 @@ def create_tasks(df, onfleet=None):
                 "notes": row["Dietary Restrictions"]
             }],
             "notes": row["Task Details (Bag Color)"],  # This might be wrong
-            "container": container
+            "quantity": row["Quantity"],
+            "container": container,
         }
 
         # Set values that may be NaN
@@ -126,7 +129,9 @@ def store_supplemental_data(df):
             'referred_by_other_source': row['Referred by other source?'],
             'household_size': int(row['Household Size'])
         }
-        redis_client.hmset("supplemental-data:" + row['Phone (cell phone preferred for delivery app and reminder texts)'], supplemental_data)
+        redis_client.hmset(
+            "supplemental-data:" + row['Phone (cell phone preferred for delivery app and reminder texts)'],
+            supplemental_data)
 
 
 def clear_supplemental_data():

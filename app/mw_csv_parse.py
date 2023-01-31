@@ -7,10 +7,7 @@ import math
 import os
 import re
 
-from app.constants import HUB_LOCATION_COORDS, ROUTE_DRIVER_HUBS
-
-# Set this to True to use the local copy of export.csv
-USE_LOCAL_CSV = False
+from app.utils import HUB_LOCATION_COORDS, ROUTE_DRIVER_HUBS
 
 
 def get_mw_csv_and_clean(cutoff_date):
@@ -56,8 +53,13 @@ def get_mw_csv_and_clean(cutoff_date):
     redis_client = current_app.extensions['redis']
     df['Team'] = math.nan
 
+    hub_dict = {}
+    for key in redis_client.keys(pattern="hub:by_id:*"):
+        hub_dict[key[10:]] = redis_client.hgetall(key)["name"]
+    print(hub_dict)
+
     for i, row in df.iterrows():
-        db_hub = redis_client.get('zip:' + str(row['Address (Postal Code)']))
+        db_hub = hub_dict[redis_client.get('zip:' + str(row['Address (Postal Code)']))]
         if not db_hub or db_hub == 'unassigned':
             raise ValueError(
                 "Error while preparing CSV data for Onfleet: Some zipcodes have not yet been assigned to a hub.")
@@ -81,7 +83,7 @@ def get_mw_csv_and_clean(cutoff_date):
 
 
 def get_mw_csv():
-    if USE_LOCAL_CSV:
+    if current_app.config["DEBUG_MODE"]:
         with open(os.path.join(os.path.dirname(__file__), "data", "export.csv")) as f:
             data = StringIO(f.read())
     else:

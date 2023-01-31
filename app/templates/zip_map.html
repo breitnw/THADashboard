@@ -16,17 +16,22 @@
     <div id="map"></div>
     <script>
         let gjData = {{geojson_data|tojson}};
-        let hubData = {{ hub_assignment_data|tojson }};
-        let hubLocationData = {{ hub_location_data|tojson }};
+        let hubAssignmentData = {{ hub_assignment_data|tojson }};
+        let hubInfo = {{ hub_info|tojson }};
     </script>
 
     <label for="hubSelector">Select Hub&nbsp;</label>
     <select id="hubSelector">
-        {% for hub in hub_location_data.keys() %}
-            <option value="{{ hub }}">{{ hub }}</option>
+        {% for hub in hub_info.keys() %}
+            <option value="{{ hub }}">{{ hub_info[hub][0] }}</option>
         {% endfor %}
     </select>
-    <br><br>
+
+    <ul>
+	<li><span style="color: green;">Green:</span> Assigned to selected hub</li>
+	<li><span style="color: gray;">Gray:</span> Assigned to another hub</li>
+	<li><span style="color: goldenrod;">Yellow:</span> Unassigned</li>
+    </ul>
 
     <button id="saveButton" onclick="submitToServer()" disabled>Save</button>
     <span id="savingText" style="color: gray" hidden>Saving...</span>
