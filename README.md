@@ -1,7 +1,9 @@
 # ha_project
 Utilities to aid in data management for The Humanity Alliance, a Minnesota-based 501(c)(3) non-profit that aspires to create long-lasting community value.
 
-#### Instructions for Use
+---
+
+### Instructions for Use
 You can build the project with `docker-compose build`, and run with `docker-compose up`.
 
 When deploying to production, first create a file named `variables.env` in the project's base directory (the same directory
@@ -11,3 +13,5 @@ to generate such a key is via `python3 -c "import secrets; print(secrets.token_h
 - Add the line `ONFLEET_API_KEY=MY_KEY`, replacing MY_KEY with an API key for Onfleet.
 - Add the line `MEMBERSHIPWORKS_API_URL=MY_URL`, replacing MY_URL with a GET request for a MembershipWorks CSV file. This
 workaround is necessary because MembershipWorks lacks a user-friendly API, so URLs must be generated on a per-network basis.
+
+Optionally, `DEBUG_MODE=True` may also be added to turn on debug mode. In debug mode, the application will pull from a local copy of the MembershipWorks database instead of downloading it from the internet, and will never send any data to Onfleet. Rather, whenever the user submits data, the parsed dataframe will simply be displayed as HTML. 
