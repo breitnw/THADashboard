@@ -9,7 +9,7 @@ ROUTE_DRIVER_HUBS = ["West", "East"]
 
 
 def safe_incr(redis_client, key):
-    value = ''
-    while value == '':
+    value = None
+    while value == None or value == '':
         value = redis_client.incr(key)
     return value

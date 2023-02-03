@@ -38,7 +38,7 @@ def controls():
 def update_users():
     redis_client = current_app.extensions['redis']
     for (user, value) in request.form.items():
-        user_id = redis_client.hget("users", user)
+        user_id = redis_client.hget("users", user.lower())
         user_key = "user:by_id:%s" % user_id
         redis_client.hset(user_key, 'permissions', value)
     return redirect(url_for("admin.controls"))
@@ -48,10 +48,10 @@ def update_users():
 @admin_required
 def delete_user(user):
     redis_client = current_app.extensions['redis']
-    user_id = redis_client.hget("users", user)
+    user_id = redis_client.hget("users", user.lower())
     user_key = "user:by_id:%s" % user_id
     redis_client.delete(user_key)
-    redis_client.hdel("users", user)
+    redis_client.hdel("users", user.lower())
     return redirect(url_for("admin.controls"))
 
 
