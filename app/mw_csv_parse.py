@@ -49,9 +49,6 @@ def get_mw_csv_and_clean(cutoff_date):
             raise ValueError('Bag quantities at row ' + str(i) + ' are invalid')
         df.loc[i, 'Task Details (Bag Color)'] = color
 
-    #  Make sure the Address (Postal Code) column only contains 5-digit postal codes =======================
-    df['Address (Postal Code)'] = df['Address (Postal Code)'].map(lambda z: int(str(z)[:5]))
-
     #  Use the database to assign values to the Team and Route/Driver column ===============================
     redis_client = current_app.extensions['redis']
     df['Team'] = math.nan
@@ -108,4 +105,8 @@ def get_mw_csv():
         raise ValueError("Error while loading CSV data from MembershipWorks: There were "
                          + str(null_zipcode_count)
                          + " value(s) in the 'Address (Postal Code)' column that could not be read.")
+
+    # Make sure the Address (Postal Code) column only contains 5-digit postal codes
+    df['Address (Postal Code)'] = df['Address (Postal Code)'].map(lambda z: int(str(z)[:5]))
+
     return df
