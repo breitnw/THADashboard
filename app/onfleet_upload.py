@@ -19,6 +19,8 @@ def create():
         flash(str(e))
         return redirect(url_for("index"))
 
+    store_supplemental_data(df)
+
     if current_app.config["DEBUG_MODE"]:
         return df.to_html()
 
@@ -32,13 +34,12 @@ def create():
     return redirect("https://onfleet.com/dashboard#/table")
 
 
-def create_tasks(df, onfleet=None):
+def create_tasks(df):
     """
     Using a pandas dataframe generated with `mw_csv_parse.get_mw_csv_and_clean()`, creates a batch of tasks and
     uploads them to Onfleet.
     """
-    if onfleet is None:
-        onfleet = current_app.extensions["onfleet"]
+    onfleet = current_app.extensions["onfleet"]
     tasks = []
     workers = onfleet.workers.get()
     teams = onfleet.teams.get()
@@ -107,9 +108,6 @@ def create_tasks(df, onfleet=None):
     except (JSONDecodeError, KeyError):
         # TODO: it's unknown why these errors occasionally occur, they might present problems in the future if ignored
         pass
-
-    store_supplemental_data(df)
-
 
 def store_supplemental_data(df):
     """

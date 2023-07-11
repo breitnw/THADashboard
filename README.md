@@ -1,4 +1,4 @@
-# ha_project
+# THADashboard
 Utilities to aid in data management for The Humanity Alliance, a Minnesota-based 501(c)(3) non-profit that aspires to create long-lasting community value.
 
 ---
@@ -14,4 +14,9 @@ to generate such a key is via `python3 -c "import secrets; print(secrets.token_h
 - Add the line `MEMBERSHIPWORKS_API_URL=MY_URL`, replacing MY_URL with a GET request for a MembershipWorks CSV file. This
 workaround is necessary because MembershipWorks lacks a user-friendly API, so URLs must be generated on a per-network basis.
 
-Optionally, `DEBUG_MODE=True` may also be added to turn on debug mode. In debug mode, the application will pull from a local copy of the MembershipWorks database, and will never send any data to Onfleet. Instead, whenever the user submits data, the parsed dataframe will simply be displayed as HTML. 
+Optionally, `DEBUG_MODE=True` may also be added to turn on debug mode. In debug mode, the application will never send any 
+data to Onfleet. Instead, whenever the user submits data, the parsed dataframe will simply be displayed as HTML.
+
+The line `USE_LOCAL_CSV=True` may too be optionally added. If enabled, the dashboard will pull from a local copy of the 
+MembershipWorks database, rather than the online version. This is useful for testing crashes and other issues related to
+new data that has been added to MembershipWorks. 

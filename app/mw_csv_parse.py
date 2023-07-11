@@ -83,7 +83,7 @@ def get_mw_csv_and_clean(cutoff_date):
 
 
 def get_mw_csv():
-    if current_app.config["DEBUG_MODE"]:
+    if current_app.config["USE_LOCAL_CSV"]:
         with open(os.path.join(os.path.dirname(__file__), "data", "export.csv")) as f:
             data = StringIO(f.read())
     else:

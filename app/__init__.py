@@ -1,4 +1,5 @@
 import os
+
 from flask import Flask, render_template
 from flask_redis import FlaskRedis
 from onfleet import Onfleet
@@ -14,7 +15,8 @@ def create_app():
         REDIS_URL=os.environ.get('REDIS_URL', 'redis://redis_db:6379'),
         ONFLEET_API_KEY=os.environ.get('ONFLEET_API_KEY'),
         MEMBERSHIPWORKS_API_URL=os.environ.get('MEMBERSHIPWORKS_API_URL'),
-        DEBUG_MODE=False if os.environ.get('DEBUG_MODE', 'False') == 'False' else True,
+        DEBUG_MODE=os.environ.get('DEBUG_MODE', 'False') != 'False',
+        USE_LOCAL_CSV=os.environ.get('USE_LOCAL_CSV', 'False') != 'False',
     )
 
     # initialize Redis and Onfleet
