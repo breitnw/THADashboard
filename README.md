@@ -53,8 +53,7 @@ The URL in the line `ΜEMBERSHIPWORKS_ΑPI_URL="https://api.membershipworks.com/
 ### `DEBUG_ΜODE` and `USE_LOCAL_CSV`
 These are the two most important variables in `variables.env` for debugging.
 
-`DEBUG_MODE=True` may be added to `variables.env` to turn on debug mode. In debug mode, the application will never send any   
-data to Onfleet. Instead, whenever the user submits data, the parsed dataframe will simply be displayed as HTML. This is essential for testing changes (particularly related to Phase 1) without modifying actual data that has already been added to Onfleet. 
+`DEBUG_MODE=True` may be added to `variables.env` to turn on debug mode. In debug mode, the application will never send any data to Onfleet. Instead, whenever the user submits data, the parsed dataframe will simply be displayed as HTML. This is essential for testing changes (particularly related to Phase 1) without modifying actual data that has already been added to Onfleet. 
   
 The line `USE_LOCAL_CSV=True` may also, optionally, be added. If enabled, the dashboard will pull from a local copy of the   
 MembershipWorks database, rather than the online version. This is useful for testing crashes and other issues related to  
